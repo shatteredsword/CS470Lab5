@@ -4,8 +4,10 @@
 
 #define TIME_QUANTUM 1
 #define LENGTH_OF_DESCRIPTOR 36
+#define BUFFSIZE 4
 
 uint_fast16_t number_of_processes;
+long int number_of_bytes;
 
  long int file_length()
 {
@@ -106,12 +108,40 @@ uint_fast16_t get_remaining_processes()
 */
 void set_status(uint_fast16_t process, char status[21])
 {
-	FILE *filepointer;
-	filepointer = fopen("processes.pro", "wb");
+	char buffer[BUFFSIZE + 1];
+	FILE *filepointer, *bufferfile;
+
+	//copy contents of processes.pro to buffer.bin using a buffer
+	bufferfile = fopen("buffer.bin", "ab");
+	filepointer = fopen("processes.pro", "rb");
+	for(long int i=0; i < number_of_bytes / BUFFSIZE; i++)
+	{
+		fread(buffer, BUFFSIZE, 1, filepointer);
+		fwrite(buffer, BUFFSIZE, 1, bufferfile);
+	}
+
+	//delete contents of processes.pro and copy up to status back to processes.pro
+
+	//append status to processes.pro
+
+	//append remaining contents of buffer.bin (minus the old status) to processes.pro
+
+	//delete contents of buffer.bin
+	bufferfile = fopen("buffer.bin", "wb");
+	fclose(bufferfile);
+
+
+
+	/*
+	
+	bufferfile = fopen("buffer.bin", "wb");
+	filepointer = fopen("processes.pro", "a+b");
 	int seeker = process * LENGTH_OF_DESCRIPTOR;
+	rewind (filepointer);
 	fseek(filepointer, seeker, SEEK_SET);
 	fwrite(status, 20, 1, filepointer);
 	fclose(filepointer);
+	*/
 }
 void set_program_counter(uint_fast16_t process, uint32_t program_counter[5])
 {
@@ -137,7 +167,7 @@ int main()
 	fclose(binaryfile);
 
 	//check if file is a valid length
-	long int number_of_bytes = file_length();
+	number_of_bytes = file_length();
 	if (number_of_bytes % LENGTH_OF_DESCRIPTOR != 0 || number_of_bytes == 0)
 	{
 		printf("%s\n", "file is missing information" );
@@ -155,7 +185,7 @@ int main()
 	/*
 	set_status(0, "terminated");
 	*/
-	
+
 	//start a count of remaining processes
 	
 	/*
@@ -169,6 +199,8 @@ int main()
 	printf("%li processes are remaining\n", remaining_processes);
 	//print total number of files
 	total_files();
+	char temp[21] = "terminated";
+	set_status(0, temp);
 
 
 	/*while (remaining_processes > 0)
