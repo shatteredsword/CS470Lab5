@@ -37,7 +37,7 @@ void total_files()
 		total += buff[0];
 	}
 	fclose(filepointer);
-	printf("file contains %i files\n", total);
+	printf("file contains %i files\n\n", total);
 }
 char* get_status(uint_fast16_t process)
 {
@@ -113,7 +113,7 @@ uint_fast16_t get_remaining_processes()
 */
 
 
-void set_status(uint_fast16_t process, char status[21])
+void set_status(uint_fast16_t process, const char status[21])
 {
 	FILE *filepointer;
 	filepointer = fopen("processes.pro", "r+b");
@@ -191,10 +191,11 @@ int main()
 		//loop for all processes
 		for (uint_fast16_t i = 0; i < number_of_processes; i++)
 		{
-			char* status = get_status(i);
+			const char *status = get_status(i);
+			const char *terminated = "terminated";
 			uint32_t program_counter = get_program_counter(i);
 			//printf("%s\n", status);
-			if (status != "terminated"){
+			if (strcmp(status, terminated) != 0){
 				uint32_t process_id, program_counter, program_limit;
 				process_id = get_process_id(i);
 				program_counter = get_program_counter(i);
@@ -204,23 +205,21 @@ int main()
 				{
 					program_counter = program_limit;
 					set_program_counter(i, program_counter);
-					status = "terminated";
 					remaining_processes--;
+					status = "terminated";
 					set_status(i, status);
-					printf("process %i is %s\n", process_id, status);
 				}
+
 				else
 				{
-					program_counter++;
 					set_program_counter(i, program_counter);
 					status = "ready";
 					set_status(i, status);
 				}
-				
 				printf("process %i is %s and is at %i of %i\n", process_id, status, program_counter, program_limit);
 			}
-			
-			printf("remaining processes: %lu\n", remaining_processes);
 		}
+		printf("%s\n\n", "PCB loop completed" );
 	}
+	printf("%s\n", "all processes terminated" );
 }
