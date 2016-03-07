@@ -39,9 +39,20 @@ void get_status(uint_fast16_t number_of_processes, uint_fast16_t process)
 	filepointer = fopen("processes.pro", "rb");
 	char buff[21];
 	int seeker = process * LENGTH_OF_DESCRIPTOR;
-		fseek(filepointer, seeker, SEEK_SET);
-		fread(buff, 4, 1, filepointer);
-		printf("%s\n", buff);
+	fseek(filepointer, seeker, SEEK_SET);
+	fread(buff, 20, 1, filepointer);
+	printf("%s\n", buff);
+	fclose(filepointer);
+}
+void get_process_id(uint_fast16_t number_of_processes, uint_fast16_t process)
+{
+	FILE *filepointer;
+	filepointer = fopen("processes.pro", "rb");
+	int buff[5];
+	int seeker = process * LENGTH_OF_DESCRIPTOR + 20;
+	fseek(filepointer, seeker, SEEK_SET);
+	fread(buff, 4, 1, filepointer);
+	printf("%i\n", buff[0]);
 	fclose(filepointer);
 }
 
@@ -111,5 +122,6 @@ int main()
 	//get status of first process
 	process = 0;
 	get_status(number_of_processes, process);
+	get_process_id(number_of_processes, process);
 
 }
