@@ -33,10 +33,46 @@ void total_files(uint_fast16_t number_of_processes)
 	fclose(filepointer);
 	printf("file contains %i files\n", total);
 }
-void round_robin(uint_fast16_t number_of_processes)
+void get_status(uint_fast16_t number_of_processes, uint_fast16_t process)
 {
-
+	FILE *filepointer;
+	filepointer = fopen("processes.pro", "rb");
+	char buff[21];
+	int seeker = process * LENGTH_OF_DESCRIPTOR;
+		fseek(filepointer, seeker, SEEK_SET);
+		fread(buff, 4, 1, filepointer);
+		printf("%s\n", buff);
+	fclose(filepointer);
 }
+
+
+/*void round_robin(uint_fast16_t number_of_processes)
+{
+	uint_fast16_t remaining_processes;
+	remaining_processes = number_of_processes;
+
+	while (remaining_processes > 0)
+	{
+		//get status of process
+
+
+		//skip process if terminated
+		if (state != "terminated"){
+
+			//do stuff
+
+			//increment program counter
+			program_counter += TIME_QUANTUM;
+			if (program_counter >= program_limit)
+			{
+				state == "terminated";
+				remaining_processes--;
+				//update state
+
+			}
+		}
+	}
+}*/
 int main()
 {
 	//check if binary file can be opened
@@ -47,6 +83,8 @@ int main()
 		printf("%s\n", "unable to open file" );
 		return 0;
 	}
+	//close the file
+	fclose(binaryfile);
 
 	//check if file is a valid length
 	long int number_of_bytes = file_length();
@@ -58,8 +96,7 @@ int main()
 
 	//variable declaration
 	uint32_t process_id, program_counter, program_limit, open_files;
-	uint_fast16_t number_of_processes, number_of_files, remaining_processes;
-	
+	uint_fast16_t number_of_processes, number_of_files, remaining_processes, process;
 
 	//variable initialization
 	number_of_processes = number_of_bytes / LENGTH_OF_DESCRIPTOR;
@@ -71,6 +108,8 @@ int main()
 	//print total number of files
 	total_files(number_of_processes);
 
-	//close the file
-	fclose(binaryfile);
+	//get status of first process
+	process = 0;
+	get_status(number_of_processes, process);
+
 }
