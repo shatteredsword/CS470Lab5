@@ -162,7 +162,57 @@ void set_status(uint_fast16_t process, char status[21])
 }
 void set_program_counter(uint_fast16_t process, uint32_t program_counter[5])
 {
-	
+	char buffer[BUFFSIZE + 1];
+	FILE *filepointer, *bufferfile;
+
+	//copy contents of processes.pro to buffer.bin using a buffer
+	filepointer = fopen("processes.pro", "rb");
+	bufferfile = fopen("buffer.bin", "ab");
+	for(long int i=0; i < number_of_bytes / BUFFSIZE; i++)
+	{
+		fread(buffer, BUFFSIZE, 1, filepointer);
+		fwrite(buffer, BUFFSIZE, 1, bufferfile);
+	}
+	fclose(filepointer);
+	fclose(bufferfile);
+
+	//delete contents of processes.pro 
+	filepointer = fopen("processes.pro", "wb");
+	fclose(filepointer);
+
+	//copy up to program_counter back to processes.pro
+	filepointer = fopen("processes.pro", "ab");
+	bufferfile = fopen("buffer.bin", "rb");
+
+	//leave i intact for next loop
+	long int i = 0;
+	while (i < (process * LENGTH_OF_DESCRIPTOR + 24) / BUFFSIZE)
+	{
+		fread(buffer, BUFFSIZE, 1, bufferfile);
+		fwrite(buffer, BUFFSIZE, 1, filepointer);
+		i++;
+	}
+	//append program counter to processes.pro
+	fwrite(program_counter, 4, 1, filepointer);
+
+	//move file pointer in buffer.bin to after the status
+	fseek(bufferfile, 4, SEEK_CUR);
+	i += 1;
+
+	//append remaining contents of buffer.bin (minus the old status) to processes.pro
+
+	while (i < number_of_bytes / BUFFSIZE)
+	{
+		fread(buffer, BUFFSIZE, 1, bufferfile);
+		fwrite(buffer, BUFFSIZE, 1, filepointer);
+		i++;
+	}
+	fclose(filepointer);
+	fclose(bufferfile);
+
+	//delete contents of buffer.bin
+	bufferfile = fopen("buffer.bin", "wb");
+	fclose(bufferfile);	
 }
 
 int main()
@@ -212,8 +262,9 @@ int main()
 	printf("%li processes are remaining\n", remaining_processes);
 	//print total number of files
 	total_files();
-	char temp[21] = "terminated";
-	set_status(4, temp);
+	uint32_t temp[5];
+	*temp = 100;
+	set_program_counter(4, temp);
 
 
 	/*while (remaining_processes > 0)
