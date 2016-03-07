@@ -1,12 +1,13 @@
 #include <stdint.h> // Exact-width integer types
 #include <stdio.h>//file operations
 #include <string.h>//used for string operations
+#include <stdlib.h>//for manual memory allocation
 
 #define TIME_QUANTUM 1
 #define LENGTH_OF_DESCRIPTOR 36
 #define BUFFSIZE 4
 
-uint_fast16_t number_of_processes, remaining_processes;
+uint_fast16_t number_of_processes;
 long int number_of_bytes = 0;
 
  long int file_length()
@@ -38,16 +39,17 @@ void total_files()
 	fclose(filepointer);
 	printf("file contains %i files\n", total);
 }
-char get_status(uint_fast16_t process)
+char* get_status(uint_fast16_t process)
 {
 	FILE *filepointer;
 	filepointer = fopen("processes.pro", "rb");
-	char buff[21];
+	char *buff = (char *) malloc(sizeof(char) * 21);
 	int seeker = process * LENGTH_OF_DESCRIPTOR;
 	fseek(filepointer, seeker, SEEK_SET);
 	fread(buff, 20, 1, filepointer);
-	printf("%s\n", buff);
+	//printf("%s\n", buff);
 	fclose(filepointer);
+	return buff;
 }
 uint32_t get_process_id(uint_fast16_t process)
 {
@@ -57,7 +59,6 @@ uint32_t get_process_id(uint_fast16_t process)
 	int seeker = process * LENGTH_OF_DESCRIPTOR + 20;
 	fseek(filepointer, seeker, SEEK_SET);
 	fread(buff, 4, 1, filepointer);
-	printf("%i\n", buff[0]);
 	fclose(filepointer);
 	return buff[0];
 }
@@ -65,12 +66,14 @@ uint32_t get_program_counter(uint_fast16_t process)
 {
 	FILE *filepointer;
 	filepointer = fopen("processes.pro", "rb");
-	uint32_t buff[5];
+	uint32_t buff;
+	uint32_t *ptr;
+	ptr = &buff;
 	int seeker = process * LENGTH_OF_DESCRIPTOR + 24;
 	fseek(filepointer, seeker, SEEK_SET);
-	fread(buff, 4, 1, filepointer);
+	fread(ptr, 4, 1, filepointer);
 	fclose(filepointer);
-	return buff[0];
+	return buff;
 }
 uint32_t get_program_limit(uint_fast16_t process)
 {
@@ -83,6 +86,8 @@ uint32_t get_program_limit(uint_fast16_t process)
 	fclose(filepointer);
 	return buff[0];
 }
+
+
 /*
 uint_fast16_t get_remaining_processes()
 {
@@ -106,113 +111,25 @@ uint_fast16_t get_remaining_processes()
 	return remaining_processes;
 }
 */
+
+
 void set_status(uint_fast16_t process, char status[21])
 {
-	char buffer[BUFFSIZE + 1];
-	FILE *filepointer, *bufferfile;
-
-	//copy contents of processes.pro to buffer.bin using a buffer
-	filepointer = fopen("processes.pro", "rb");
-	bufferfile = fopen("buffer.bin", "ab");
-	for(long int i=0; i < number_of_bytes / BUFFSIZE; i++)
-	{
-		fread(buffer, BUFFSIZE, 1, filepointer);
-		fwrite(buffer, BUFFSIZE, 1, bufferfile);
-	}
-	fclose(filepointer);
-	fclose(bufferfile);
-
-	//delete contents of processes.pro 
-	filepointer = fopen("processes.pro", "wb");
-	fclose(filepointer);
-
-	//copy up to status back to processes.pro
-	filepointer = fopen("processes.pro", "ab");
-	bufferfile = fopen("buffer.bin", "rb");
-
-	//leave i intact for next loop
-	long int i = 0;
-	while (i < process * LENGTH_OF_DESCRIPTOR / BUFFSIZE)
-	{
-		fread(buffer, BUFFSIZE, 1, bufferfile);
-		fwrite(buffer, BUFFSIZE, 1, filepointer);
-		i++;
-	}
-	//append status to processes.pro
+	FILE *filepointer;
+	filepointer = fopen("processes.pro", "r+b");
+	fseek(filepointer, process * LENGTH_OF_DESCRIPTOR, SEEK_SET);
 	fwrite(status, 20, 1, filepointer);
-
-	//move file pointer in buffer.bin to after the status
-	fseek(bufferfile, 20, SEEK_CUR);
-	i += 5;
-
-	//append remaining contents of buffer.bin (minus the old status) to processes.pro
-
-	while (i < number_of_bytes / BUFFSIZE)
-	{
-		fread(buffer, BUFFSIZE, 1, bufferfile);
-		fwrite(buffer, BUFFSIZE, 1, filepointer);
-		i++;
-	}
 	fclose(filepointer);
-	fclose(bufferfile);
-
-	//delete contents of buffer.bin
-	bufferfile = fopen("buffer.bin", "wb");
-	fclose(bufferfile);
 }
-void set_program_counter(uint_fast16_t process, uint32_t program_counter[5])
+
+void set_program_counter(uint_fast16_t process, uint32_t program_counter)
 {
-	char buffer[BUFFSIZE + 1];
-	FILE *filepointer, *bufferfile;
-
-	//copy contents of processes.pro to buffer.bin using a buffer
-	filepointer = fopen("processes.pro", "rb");
-	bufferfile = fopen("buffer.bin", "ab");
-	for(long int i=0; i < number_of_bytes / BUFFSIZE; i++)
-	{
-		fread(buffer, BUFFSIZE, 1, filepointer);
-		fwrite(buffer, BUFFSIZE, 1, bufferfile);
-	}
+	FILE *filepointer;
+	uint32_t *ptr = &program_counter;
+	filepointer = fopen("processes.pro", "r+b");
+	fseek(filepointer, process * LENGTH_OF_DESCRIPTOR + 24, SEEK_SET);
+	fwrite(ptr, 4, 1, filepointer);
 	fclose(filepointer);
-	fclose(bufferfile);
-
-	//delete contents of processes.pro 
-	filepointer = fopen("processes.pro", "wb");
-	fclose(filepointer);
-
-	//copy up to program_counter back to processes.pro
-	filepointer = fopen("processes.pro", "ab");
-	bufferfile = fopen("buffer.bin", "rb");
-
-	//leave i intact for next loop
-	long int i = 0;
-	while (i < (process * LENGTH_OF_DESCRIPTOR + 24) / BUFFSIZE)
-	{
-		fread(buffer, BUFFSIZE, 1, bufferfile);
-		fwrite(buffer, BUFFSIZE, 1, filepointer);
-		i++;
-	}
-	//append program counter to processes.pro
-	fwrite(program_counter, 4, 1, filepointer);
-
-	//move file pointer in buffer.bin to after the status
-	fseek(bufferfile, 4, SEEK_CUR);
-	i += 1;
-
-	//append remaining contents of buffer.bin (minus the old status) to processes.pro
-
-	while (i < number_of_bytes / BUFFSIZE)
-	{
-		fread(buffer, BUFFSIZE, 1, bufferfile);
-		fwrite(buffer, BUFFSIZE, 1, filepointer);
-		i++;
-	}
-	fclose(filepointer);
-	fclose(bufferfile);
-
-	//delete contents of buffer.bin
-	bufferfile = fopen("buffer.bin", "wb");
-	fclose(bufferfile);	
 }
 
 int main()
@@ -238,42 +155,47 @@ int main()
 	}
 
 	//variable declaration
-	uint32_t process_id, program_counter, program_limit, open_files;
-	uint_fast16_t number_of_files, process;
+	uint32_t open_files;
+	uint_fast16_t number_of_files, process, remaining_processes;
 	char status[21];
 
 	//variable initialization
 	number_of_processes = number_of_bytes / LENGTH_OF_DESCRIPTOR;
-	
-	/*
-	set_status(0, "terminated");
-	*/
-
-	//start a count of remaining processes
-	
-	/*
-	remaining_processes = get_remaining_processes();
-	*/
 	remaining_processes = number_of_processes;
 
 	//print total number of processes
 	printf("file conatins %li processes\n", number_of_processes);
 
-	printf("%li processes are remaining\n", remaining_processes);
+	//printf("%li processes are remaining\n", remaining_processes);
+	
 	//print total number of files
 	total_files();
+
+
+
+	/*
+	char tempor[21] = "terminated";
+	set_status(4, tempor);
+
+
 	uint32_t temp[5];
-	*temp = 100;
+	*temp = 4294967295;
 	set_program_counter(4, temp);
+	*/
 
 
-	/*while (remaining_processes > 0)
+
+	while (remaining_processes > 0)
 	{
+		
 		//loop for all processes
 		for (uint_fast16_t i = 0; i < number_of_processes; i++)
-
-			status = get_status(i);
-			if (status != "terminated" && status != "blocked"){
+		{
+			char* status = get_status(i);
+			uint32_t program_counter = get_program_counter(i);
+			//printf("%s\n", status);
+			if (status != "terminated"){
+				uint32_t process_id, program_counter, program_limit;
 				process_id = get_process_id(i);
 				program_counter = get_program_counter(i);
 				program_limit = get_program_limit(i);
@@ -281,14 +203,24 @@ int main()
 				if (program_counter >= program_limit)
 				{
 					program_counter = program_limit;
+					set_program_counter(i, program_counter);
 					status = "terminated";
 					remaining_processes--;
+					set_status(i, status);
+					printf("process %i is %s\n", process_id, status);
 				}
-				set_status(i, status);
-				set_program_counter(i, program_counter);
-				printf("proess %i is %s and is at %i of %i\n", process_id, status, program_counter, program_limit);
-
+				else
+				{
+					program_counter++;
+					set_program_counter(i, program_counter);
+					status = "ready";
+					set_status(i, status);
+				}
+				
+				printf("process %i is %s and is at %i of %i\n", process_id, status, program_counter, program_limit);
 			}
+			
+			printf("remaining processes: %lu\n", remaining_processes);
 		}
-	}*/
+	}
 }
